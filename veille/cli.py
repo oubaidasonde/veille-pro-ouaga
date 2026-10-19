@@ -72,6 +72,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("planifie", help="Exécution quotidienne : collecte + bulletins prévus ce jour")
     sub.add_parser("test-envoi", help="Envoyer un message de test sur chaque canal")
     sub.add_parser("liste", help="Afficher les événements enregistrés")
+    sub.add_parser("apercu", help="Lister les articles qui seraient analysés (sans IA, sans rien enregistrer)")
 
     args = p.parse_args(argv)
     _charger_env()
@@ -109,6 +110,16 @@ def main(argv: list[str] | None = None) -> int:
         for canal, r in resultats.items():
             print(f"{canal:10s} {r}")
         return 0 if all(r == "ok" for r in resultats.values()) else 1
+
+    if args.commande == "apercu":
+        from .sources import annonce_probable, collecter_actualites, collecter_flux, nouveau_client_http
+        with nouveau_client_http() as http:
+            docs = collecter_flux(cfg, http) + collecter_actualites(cfg, http)
+        for d in docs:
+            marque = "★" if annonce_probable(f"{d.titre} {d.texte[:500]}", cfg) else " "
+            print(f"{marque} [{d.source:10s}] {d.titre[:110]}")
+        print(f"\n{len(docs)} documents — ★ = ressemble à une annonce d'événement")
+        return 0
 
     if args.commande == "liste":
         for e in sorted(store.tous(), key=lambda e: e.date_debut or "9999"):

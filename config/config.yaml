@@ -162,6 +162,11 @@ max_articles_complets: 30
 
 # Requêtes de veille presse (Google News, gratuit, sans clé).
 requetes_actualites:
+  - inscriptions ouvertes formation Ouagadougou
+  - appel à candidatures formation Burkina Faso
+  - communiqué séminaire de formation Ouagadougou
+  - session de formation Ouagadougou hôtel
+  - renforcement des capacités atelier Ouagadougou
   - séminaire Ouagadougou hôtel
   - atelier de formation Ouagadougou
   - conférence Ouagadougou
