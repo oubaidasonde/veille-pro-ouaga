@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ b.titre }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f1ec;font-family:Segoe UI,Helvetica,Arial,sans-serif;color:#1f2933;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f1ec;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#ffffff;border-radius:10px;overflow:hidden;">
+
+  <!-- En-tête -->
+  <tr><td style="background:#0f3d3e;padding:28px 32px;color:#ffffff;">
+    <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#e9c46a;">{{ cfg.profil.nom }}</div>
+    <div style="font-size:24px;font-weight:700;margin-top:6px;">{{ b.titre }}</div>
+    <div style="font-size:13px;margin-top:8px;color:#cfe3e1;">
+      Zone : {{ zone }} · {{ b.evenements|length }} événement(s) ·
+      {{ b.confirmes|length }} confirmé(s) · {{ b.a_verifier|length }} à vérifier
+    </div>
+  </td></tr>
+
+  {% if clotures %}
+  <tr><td style="padding:20px 32px 0;">
+    <div style="background:#fff4e5;border-left:4px solid #e76f51;padding:12px 16px;border-radius:6px;font-size:14px;">
+      <strong>⏰ Inscriptions qui ferment bientôt</strong>
+      <ul style="margin:8px 0 0;padding-left:18px;">
+      {% for e in clotures %}
+        <li>{{ e.titre }} — avant le {{ e.cloture|date_fr(False) }}</li>
+      {% endfor %}
+      </ul>
+    </div>
+  </td></tr>
+  {% endif %}
+
+  {% if not b.evenements %}
+  <tr><td style="padding:32px;font-size:15px;color:#52606d;">
+    Aucun nouvel événement ne correspond à vos critères pour cette période. La veille continue.
+  </td></tr>
+  {% endif %}
+
+  {% for e in b.evenements %}
+  <tr><td style="padding:20px 32px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+           style="border:1px solid #e4e7eb;border-radius:8px;">
+      <tr><td style="padding:16px 18px;">
+        <div style="font-size:12px;color:#52606d;text-transform:uppercase;letter-spacing:1px;">
+          Événement {{ loop.index }} — {{ TYPES_FR.get(e.type, "Événement") }}
+          {% if e.id in b.nouveaux_ids %}<span style="color:#2a9d8f;font-weight:700;"> · Nouveau</span>{% endif %}
+        </div>
+        <div style="font-size:18px;font-weight:700;margin:6px 0 4px;color:#0f3d3e;">{{ e.titre }}</div>
+        {% if e.statut == "confirme" %}
+        <span style="display:inline-block;background:#d8f3dc;color:#1b4332;font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;">Confirmé · {{ e.score_confiance }}/100</span>
+        {% else %}
+        <span style="display:inline-block;background:#fdecc8;color:#7c4a03;font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;">À vérifier · {{ e.score_confiance }}/100</span>
+        {% endif %}
+        <p style="font-size:14px;line-height:1.5;margin:10px 0;color:#323f4b;">{{ e.resume }}</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.6;">
+          <tr><td style="color:#52606d;padding-right:12px;vertical-align:top;">Date</td><td>{{ e|periode_fr }}{% if e.horaires %} · {{ e.horaires }}{% endif %}</td></tr>
+          <tr><td style="color:#52606d;padding-right:12px;vertical-align:top;">Lieu</td><td>{{ e.lieu or "À confirmer" }}{{ e|ville_fr }}</td></tr>
+          <tr><td style="color:#52606d;padding-right:12px;vertical-align:top;">Thème</td><td>{% for t in e.themes %}{{ THEMES.get(t, t) }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
+          {% if e.organisateur %}<tr><td style="color:#52606d;padding-right:12px;vertical-align:top;">Organisateur</td><td>{{ e.organisateur }}</td></tr>{% endif %}
+          {% if e.public_cible %}<tr><td style="color:#52606d;padding-right:12px;vertical-align:top;">Public</td><td>{{ e.public_cible }}</td></tr>{% endif %}
+          <tr><td style="color:#52606d;padding-right:12px;vertical-align:top;">Participation</td><td>{{ e|tarif_fr }}</td></tr>
+          {% if e.date_limite_inscription %}<tr><td style="color:#52606d;padding-right:12px;vertical-align:top;">Clôture</td><td>{{ e.cloture|date_fr }}</td></tr>{% endif %}
+          {% if e.contact %}<tr><td style="color:#52606d;padding-right:12px;vertical-align:top;">Contact</td><td>{{ e.contact }}</td></tr>{% endif %}
+        </table>
+        {% if e.points_a_verifier and e.statut != "confirme" %}
+        <div style="font-size:13px;color:#7c4a03;margin-top:10px;">⚠️ {{ e.points_a_verifier|join(" · ") }}</div>
+        {% endif %}
+        <div style="margin-top:14px;">
+          {% if e.inscription_url %}
+          <a href="{{ e.inscription_url }}" style="display:inline-block;background:#e76f51;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:9px 18px;border-radius:6px;">S'inscrire</a>
+          {% endif %}
+          {% for u in e.source_urls[:3] if u.startswith("http") %}
+          <a href="{{ u }}" style="font-size:13px;color:#0f3d3e;margin-left:10px;">Source {{ loop.index }}</a>
+          {% endfor %}
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+  {% endfor %}
+
+  <!-- Pied -->
+  <tr><td style="padding:28px 32px;font-size:12px;color:#7b8794;line-height:1.6;">
+    <strong>Confirmé</strong> : date, lieu et source officielle ou recoupée.
+    <strong>À vérifier</strong> : annonce prometteuse dont un élément reste à confirmer auprès de l'organisateur.<br>
+    Les informations proviennent de sources publiques ; vérifiez toujours auprès de l'organisateur avant tout paiement.
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

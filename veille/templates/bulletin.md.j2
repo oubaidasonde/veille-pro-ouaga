@@ -1,0 +1,46 @@
+# {{ cfg.profil.nom }}
+## {{ b.titre }}
+
+Zone : {{ zone }} · **{{ b.evenements|length }}** événement(s) · {{ b.confirmes|length }} confirmé(s) · {{ b.a_verifier|length }} à vérifier
+
+{% if clotures %}
+> ⏰ **Inscriptions qui ferment bientôt**
+{% for e in clotures %}
+> - {{ e.titre }} — avant le {{ e.cloture|date_fr(False) }}
+{% endfor %}
+
+{% endif %}
+{% if not b.evenements %}
+_Aucun nouvel événement ne correspond à vos critères pour cette période._
+{% endif %}
+{% for e in b.evenements %}
+---
+
+### Événement {{ loop.index }} — {{ TYPES_FR.get(e.type, "Événement") }}{% if e.id in b.nouveaux_ids %} 🆕{% endif %}
+
+**{{ e.titre }}** — {{ "✅ Confirmé" if e.statut == "confirme" else "🔎 À vérifier" }} ({{ e.score_confiance }}/100)
+
+{{ e.resume }}
+
+| | |
+|---|---|
+| **Date** | {{ e|periode_fr }}{% if e.horaires %} · {{ e.horaires }}{% endif %} |
+| **Lieu** | {{ e.lieu or "À confirmer" }}{{ e|ville_fr }} |
+| **Thème** | {% for t in e.themes %}{{ THEMES.get(t, t) }}{% if not loop.last %}, {% endif %}{% endfor %} |
+| **Organisateur** | {{ e.organisateur or "À identifier" }} |
+| **Public cible** | {{ e.public_cible or "Non précisé" }} |
+| **Participation** | {{ e|tarif_fr }} |
+| **Clôture des inscriptions** | {{ e.cloture|date_fr if e.date_limite_inscription else "Non publiée" }} |
+| **Inscription** | {{ e.inscription_url or e.contact or "Lien officiel à rechercher" }} |
+
+
+{% if e.points_a_verifier and e.statut != "confirme" %}
+⚠️ À vérifier : {{ e.points_a_verifier|join(" · ") }}
+
+{% endif %}
+Sources : {% for u in e.source_urls %}{{ u }}{% if not loop.last %} · {% endif %}{% endfor %}
+
+
+{% endfor %}
+---
+_Confirmé : date, lieu et source officielle ou recoupée. À vérifier : un élément reste à confirmer auprès de l'organisateur._

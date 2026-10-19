@@ -1,0 +1,169 @@
+# =============================================================================
+#  Veille Pro Ouaga — configuration de l'agent
+#  Toutes les préférences se règlent ici, sans toucher au code.
+# =============================================================================
+
+profil:
+  nom: "Veille professionnelle — Ouagadougou"
+  langue: fr
+  fuseau_horaire: Africa/Ouagadougou   # UTC+0, pas d'heure d'été
+
+# -----------------------------------------------------------------------------
+# 1. Thématiques suivies
+#    Valeurs possibles : entrepreneuriat, finance, numerique, marketing,
+#    management, marches_publics, developpement_personnel, diplomatie
+#    Mettre `toutes: true` pour tout recevoir.
+# -----------------------------------------------------------------------------
+thematiques:
+  toutes: true
+  selection:
+    - entrepreneuriat
+    - finance
+    - numerique
+    - marketing
+    - management
+    - marches_publics
+    - developpement_personnel
+    - diplomatie
+
+# -----------------------------------------------------------------------------
+# 2. Budget de participation
+#    gratuit        → événements gratuits uniquement
+#    petit_prix     → gratuits + payants jusqu'à `plafond_fcfa`
+#    tous           → tous budgets, y compris les formations premium
+#    Un événement dont le tarif n'est pas publié est conservé (marqué "tarif à vérifier").
+# -----------------------------------------------------------------------------
+budget:
+  mode: tous
+  plafond_fcfa: 50000
+
+# -----------------------------------------------------------------------------
+# 3. Fréquence d'envoi
+#    quotidien | hebdo_et_mensuel | mensuel
+#    La collecte, elle, tourne tous les jours (voir .github/workflows/veille.yml).
+# -----------------------------------------------------------------------------
+frequence: hebdo_et_mensuel
+
+# -----------------------------------------------------------------------------
+# 4. Canaux d'alerte (les identifiants sont dans les variables d'environnement)
+#    email | telegram | whatsapp
+# -----------------------------------------------------------------------------
+canaux:
+  - email
+  - telegram
+# whatsapp_fournisseur : twilio (officiel, payant) ou callmebot (gratuit, usage perso)
+whatsapp_fournisseur: callmebot
+
+# -----------------------------------------------------------------------------
+# 5. Zone géographique
+#    ouagadougou   → Ouagadougou uniquement
+#    burkina       → tout le Burkina Faso, priorité Ouagadougou
+# -----------------------------------------------------------------------------
+zone: burkina
+
+# Horizon de recherche : événements des N prochains jours
+horizon_jours: 120
+# Signaler en priorité les inscriptions qui ferment sous N jours
+alerte_cloture_jours: 10
+
+# -----------------------------------------------------------------------------
+# Lieux surveillés. Liste à confirmer / compléter selon les lieux réellement
+# utilisés. `alias` sert à reconnaître le lieu dans les annonces.
+# `site` est facultatif : s'il est vide, l'agent passe par la recherche web.
+# -----------------------------------------------------------------------------
+lieux:
+  - nom: Lancaster Ouaga 2000
+    type: hotel
+    alias: ["lancaster", "hôtel lancaster", "lancaster ouaga"]
+    site: ""
+  - nom: Bravia Hotel Ouagadougou
+    type: hotel
+    alias: ["bravia", "bravia hotel", "hôtel bravia"]
+    site: ""
+  - nom: Sopatel Silmandé
+    type: hotel
+    alias: ["silmandé", "silmande", "sopatel"]
+    site: ""
+  - nom: Azalaï Hôtel Ouagadougou
+    type: hotel
+    alias: ["azalaï", "azalai", "hôtel indépendance"]
+    site: ""
+  - nom: Hôtel Laïco Ouaga 2000
+    type: hotel
+    alias: ["laïco", "laico", "ouaga 2000 hotel"]
+    site: ""
+  - nom: Splendid Hôtel Ouagadougou
+    type: hotel
+    alias: ["splendid hôtel", "splendid hotel", "hôtel splendid"]
+    site: ""
+  - nom: Pacific Hôtel
+    type: hotel
+    alias: ["pacific hôtel", "pacific hotel"]
+    site: ""
+  - nom: Royal Beach Hôtel
+    type: hotel
+    alias: ["royal beach"]
+    site: ""
+  - nom: Palm Beach Hôtel
+    type: hotel
+    alias: ["palm beach"]
+    site: ""
+  - nom: Centre International de Conférences de Ouaga 2000
+    type: centre_conference
+    alias: ["cico", "centre international de conférences", "salle des banquets de ouaga 2000"]
+    site: ""
+  - nom: Maison de l'Entreprise du Burkina Faso
+    type: centre_conference
+    alias: ["maison de l'entreprise", "mebf"]
+    site: ""
+  - nom: CCI-BF (Chambre de Commerce)
+    type: centre_conference
+    alias: ["cci-bf", "chambre de commerce et d'industrie du burkina"]
+    site: ""
+  - nom: SIAO
+    type: centre_conference
+    alias: ["siao", "salon international de l'artisanat"]
+    site: ""
+
+# Organismes dont les annonces sont suivies (recherche par nom).
+organismes:
+  - Chambre de Commerce et d'Industrie du Burkina Faso (CCI-BF)
+  - Maison de l'Entreprise du Burkina Faso (MEBF)
+  - ARCOP (Autorité de Régulation de la Commande Publique)
+  - Ordre National des Experts-Comptables (ONECCA-BF)
+  - BCEAO
+  - Commission de l'UEMOA
+  - Bourse Régionale des Valeurs Mobilières (BRVM)
+  - ANPTIC
+  - Agence Burkinabè des Investissements (ABI)
+  - Conseil National du Patronat Burkinabè (CNPB)
+  - Banque mondiale Burkina Faso
+  - PNUD Burkina Faso
+  - Institut Français / Ambassades à Ouagadougou
+
+# Pages web à lire directement à chaque collecte (pages événements d'hôtels,
+# agendas d'organismes...). Ajoutez ici toute URL fiable que vous connaissez.
+pages_suivies: []
+#  - https://exemple.bf/agenda
+
+# Requêtes de veille presse (Google News, gratuit, sans clé).
+requetes_actualites:
+  - séminaire Ouagadougou hôtel
+  - atelier de formation Ouagadougou
+  - conférence Ouagadougou
+  - forum Ouagadougou
+  - formation certifiante Ouagadougou
+  - Lancaster Ouaga 2000
+  - Azalaï Ouagadougou
+  - Bravia Ouagadougou
+  - Silmandé Ouagadougou
+  - Laïco Ouaga 2000
+  - passation des marchés formation Burkina
+  - appel à participation séminaire Burkina Faso
+
+# Recherche web approfondie par Claude (nécessite ANTHROPIC_API_KEY).
+recherche_ia:
+  active: true
+  modele: claude-opus-5-5
+  effort: medium            # low | medium | high
+  max_recherches: 12        # nombre maximal de requêtes web par collecte

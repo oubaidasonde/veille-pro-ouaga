@@ -1,0 +1,30 @@
+[project]
+name = "veille-pro-ouaga"
+version = "1.0.0"
+description = "Agent de veille sur les formations, conférences et séminaires professionnels à Ouagadougou"
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = [
+  "anthropic>=1.15,<2",
+  "pydantic>=2.7,<3",
+  "PyYAML>=6.0",
+  "httpx>=0.27",
+  "feedparser>=6.0",
+  "beautifulsoup4>=4.12",
+  "Jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+veille = "veille.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["veille*"]
+
+[tool.setuptools.package-data]
+veille = ["templates/*.j2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
