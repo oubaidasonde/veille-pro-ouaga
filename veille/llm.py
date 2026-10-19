@@ -37,6 +37,10 @@ Règles strictes :
 S'il n'y a aucun événement, renvoie une liste vide."""
 
 
+class IAIndisponible(RuntimeError):
+    """Claude ne répond pas (crédit épuisé, clé invalide, service inaccessible)."""
+
+
 def client_ia() -> anthropic.Anthropic:
     return anthropic.Anthropic(max_retries=4)
 
@@ -74,11 +78,10 @@ def extraire_evenements_ia(docs: list[RawDocument], aujourdhui: date,
                 output_format=ExtractionResultat,
                 messages=[{"role": "user", "content": lot}],
             )
-        except anthropic.APIStatusError as exc:
-            log.error("Extraction lot %d : erreur API %s", i, exc.status_code)
-            continue
-        except anthropic.APIConnectionError as exc:
-            log.error("Extraction lot %d : connexion impossible (%s)", i, exc)
+        except (anthropic.APIStatusError, anthropic.APIConnectionError) as exc:
+            if not resultats:  # échec dès le départ : inutile d'insister sur les autres lots
+                raise IAIndisponible(str(exc)) from exc
+            log.error("Extraction lot %d ignoré : %s", i, exc)
             continue
         if reponse.stop_reason in ("refusal", "max_tokens") or reponse.parsed_output is None:
             log.warning("Extraction lot %d ignoré (stop_reason=%s)", i, reponse.stop_reason)

@@ -72,7 +72,11 @@ def envoyer_telegram(b: Bulletin, cfg: Config, http: httpx.Client) -> None:
                 json={"chat_id": chat, "text": texte, "disable_web_page_preview": True},
             )
             if resp.status_code != 200:
-                raise RuntimeError(f"Telegram {resp.status_code} : {resp.text[:200]}")
+                aide = ""
+                if chat == jeton.split(":")[0]:
+                    aide = (" — TELEGRAM_CHAT_ID est l'identifiant du bot, pas le vôtre : envoyez /start "
+                            "au bot puis lisez votre id sur https://api.telegram.org/bot<JETON>/getUpdates")
+                raise RuntimeError(f"Telegram {resp.status_code} : {resp.text[:200]}{aide}")
             time.sleep(0.5)
     log.info("Telegram : bulletin envoyé à %d conversation(s)", len(chats))
 

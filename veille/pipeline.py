@@ -10,7 +10,7 @@ from pathlib import Path
 from .config import ROOT, Config
 from .filtres import selectionner
 from .heuristique import extraire_evenements_heuristique
-from .llm import extraire_evenements_ia
+from .llm import IAIndisponible, extraire_evenements_ia
 from .models import RawDocument
 from .rapport import Bulletin, rendre_html, rendre_markdown
 from .sources import collecter_tout, nouveau_client_http
@@ -32,10 +32,15 @@ class BilanCollecte:
 
 def traiter_documents(docs: list[RawDocument], cfg: Config, store: Store, aujourdhui: date,
                       verifier_les_liens: bool = True) -> BilanCollecte:
-    if cfg.ia_disponible:
-        extraits = extraire_evenements_ia(docs, aujourdhui, cfg.recherche_ia.modele, cfg.recherche_ia.effort)
-    else:
+    extraits = None
+    if cfg.ia_disponible and docs:
+        try:
+            extraits = extraire_evenements_ia(docs, aujourdhui, cfg.recherche_ia.modele, cfg.recherche_ia.effort)
+        except IAIndisponible as exc:
+            log.warning("Claude indisponible (%s) : extraction par mots-clés à la place.", exc)
+    elif not cfg.ia_disponible:
         log.warning("Pas de clé ANTHROPIC_API_KEY : extraction par mots-clés (résultats « à vérifier »).")
+    if extraits is None:
         extraits = extraire_evenements_heuristique(docs, cfg, aujourdhui)
 
     nouveaux = mis_a_jour = 0

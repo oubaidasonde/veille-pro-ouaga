@@ -197,3 +197,19 @@ def test_lecture_flux_rss(cfg):
     docs = collecter_actualites(cfg, http)
     assert len(docs) == 1  # même lien vu par deux requêtes → dédoublonné
     assert docs[0].texte == "Atelier le 20 novembre 2026 à Ouagadougou"
+
+
+def test_repli_mots_cles_si_claude_indisponible(cfg, store, monkeypatch):
+    from veille import pipeline
+    from veille.llm import IAIndisponible
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+
+    def echec(*a, **k):
+        raise IAIndisponible("Your credit balance is too low")
+
+    monkeypatch.setattr(pipeline, "extraire_evenements_ia", echec)
+    docs = [RawDocument(source="actualites", url="https://x", titre="Forum de l'entrepreneuriat à Ouagadougou",
+                        texte="Forum le 15 décembre 2026 au Bravia Hotel, Ouagadougou.")]
+    bilan = pipeline.traiter_documents(docs, cfg, store, AUJ, verifier_les_liens=False)
+    assert bilan.nouveaux == 1 and store.tous()[0].lieu_surveille == "Bravia Hotel Ouagadougou"
