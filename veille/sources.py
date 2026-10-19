@@ -55,6 +55,52 @@ def collecter_actualites(cfg: Config, http: httpx.Client) -> list[RawDocument]:
 
 
 # --------------------------------------------------------------------------- #
+# 1 bis. Flux RSS des médias burkinabè — lecture complète des annonces probables
+# --------------------------------------------------------------------------- #
+MOTS_EVENEMENT = ("formation", "séminaire", "seminaire", "atelier", "conférence", "conference", "forum",
+                  "salon", "colloque", "panel", "masterclass", "webinaire", "rencontre", "symposium",
+                  "journées", "hackathon", "certifiant", "inscription", "appel à candidatures")
+
+
+def annonce_probable(texte: str, cfg: Config) -> bool:
+    t = texte.lower()
+    return any(m in t for m in MOTS_EVENEMENT) and (
+        "ouaga" in t or "burkina" in t or cfg.lieu_connu(texte) is not None)
+
+
+def collecter_flux(cfg: Config, http: httpx.Client) -> list[RawDocument]:
+    candidats: dict[str, RawDocument] = {}
+    for flux in cfg.flux_rss:
+        try:
+            resp = http.get(flux)
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            log.warning("Flux %s indisponible : %s", flux, exc)
+            continue
+        for entry in feedparser.parse(resp.content).entries:
+            lien = entry.get("link", "")
+            resume = BeautifulSoup(entry.get("summary", ""), "html.parser").get_text(" ", strip=True)
+            titre = entry.get("title", "")
+            if lien and lien not in candidats and annonce_probable(f"{titre} {resume}", cfg):
+                candidats[lien] = RawDocument(source="actualites", url=lien, titre=titre, texte=resume,
+                                              publie_le=entry.get("published"))
+
+    complets = 0
+    for doc in list(candidats.values())[: cfg.max_articles_complets]:
+        try:
+            resp = http.get(doc.url)
+            resp.raise_for_status()
+        except httpx.HTTPError:
+            continue
+        _, texte = extraire_texte_html(resp.text)
+        if len(texte) > len(doc.texte):
+            doc.texte = texte
+            complets += 1
+    log.info("Flux RSS : %d annonces probables, %d lues en entier", len(candidats), complets)
+    return list(candidats.values())
+
+
+# --------------------------------------------------------------------------- #
 # 2. Pages suivies — sites d'hôtels, agendas d'organismes
 # --------------------------------------------------------------------------- #
 def extraire_texte_html(html: str) -> tuple[str, str]:
@@ -178,6 +224,9 @@ def collecter_recherche_ia(cfg: Config, aujourdhui: date) -> list[RawDocument]:
     if cfg.recherche_ia.fournisseur == "gemini":
         from . import gemini
 
+        if not cfg.recherche_ia.recherche_web:
+            log.info("Recherche web Gemini désactivée (recherche_web: false).")
+            return []
         resultats = []
         for i, angle in enumerate(ANGLES_GEMINI):
             if i:
@@ -206,9 +255,13 @@ def nouveau_client_http() -> httpx.Client:
 
 def collecter_tout(cfg: Config, aujourdhui: date) -> list[RawDocument]:
     with nouveau_client_http() as http:
-        docs = collecter_actualites(cfg, http) + collecter_pages(cfg, http)
+        docs = collecter_actualites(cfg, http) + collecter_flux(cfg, http) + collecter_pages(cfg, http)
     try:
         docs += collecter_recherche_ia(cfg, aujourdhui)
     except Exception as exc:  # noqa: BLE001 — la collecte continue sans la recherche IA
-        log.error("Recherche IA en échec : %s", exc)
+        if "429" in str(exc):
+            log.warning("Recherche web IA sans quota pour l'instant (429) : la collecte continue sans elle. "
+                        "Si cela se répète, mettez recherche_web: false dans config/config.yaml.")
+        else:
+            log.error("Recherche IA en échec : %s", exc)
     return docs

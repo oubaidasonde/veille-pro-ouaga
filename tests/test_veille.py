@@ -309,3 +309,28 @@ def test_gemini_modele_retire_bascule_sur_le_modele_suggere(monkeypatch):
     texte, _ = gemini.rechercher("consigne", "gemini-2.5-flash")
     assert texte == "ok"
     assert [a["model"] for a in faux.appels] == ["gemini-2.5-flash", "gemini-3.8-flash"]
+
+
+def test_flux_rss_lit_les_annonces_en_entier(cfg):
+    import httpx
+
+    from veille.sources import collecter_flux
+
+    rss = """<?xml version="1.0"?><rss version="2.0"><channel><title>t</title>
+    <item><title>Séminaire sur la fiscalité à Ouagadougou</title><link>https://media.bf/seminaire</link>
+    <description>Le cabinet X organise un séminaire...</description></item>
+    <item><title>Match de football : victoire des Étalons</title><link>https://media.bf/foot</link>
+    <description>Sport</description></item></channel></rss>"""
+    article = "<html><body><p>Séminaire le 12 novembre 2026 à l'hôtel Azalaï. Frais : 100 000 FCFA.</p></body></html>"
+
+    def repondre(req):
+        if req.url.path.endswith(".xml"):
+            return httpx.Response(200, text=rss)
+        if req.url.path == "/seminaire":
+            return httpx.Response(200, text=article)
+        return httpx.Response(404)
+
+    cfg.flux_rss = ["https://media.bf/feed.xml"]
+    docs = collecter_flux(cfg, httpx.Client(transport=httpx.MockTransport(repondre)))
+    assert [d.url for d in docs] == ["https://media.bf/seminaire"]  # le football est écarté
+    assert "100 000 FCFA" in docs[0].texte                            # texte complet de l'article

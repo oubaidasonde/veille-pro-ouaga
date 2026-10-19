@@ -55,6 +55,7 @@ class RechercheIA(BaseModel):
     active: bool = True
     fournisseur: Literal["gemini", "claude"] = "gemini"
     modele_gemini: str = "gemini-3.8-flash"
+    recherche_web: bool = True  # Gemini : désactiver si l'offre gratuite n'inclut pas Google Search
     modele: str = "claude-opus-5-5"
     effort: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
     max_recherches: int = 12
@@ -73,6 +74,8 @@ class Config(BaseModel):
     lieux: list[Lieu] = Field(default_factory=list)
     organismes: list[str] = Field(default_factory=list)
     pages_suivies: list[str] = Field(default_factory=list)
+    flux_rss: list[str] = Field(default_factory=list)
+    max_articles_complets: int = 30
     requetes_actualites: list[str] = Field(default_factory=list)
     recherche_ia: RechercheIA = Field(default_factory=RechercheIA)
 

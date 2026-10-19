@@ -148,6 +148,19 @@ organismes:
 pages_suivies: []
 #  - https://exemple.bf/agenda
 
+# Flux RSS de médias et d'organismes burkinabè : les articles qui ressemblent à une annonce
+# d'événement sont lus EN ENTIER (dates, tarifs, contacts), dans la limite de max_articles_complets.
+# Un flux indisponible est simplement ignoré.
+flux_rss:
+  - https://lefaso.net/spip.php?page=backend
+  - https://www.burkina24.com/feed/
+  - https://www.sidwaya.info/feed/
+  - https://www.aib.media/feed/
+  - https://www.wakatsera.com/feed/
+  - https://www.leconomistedufaso.bf/feed/
+  - https://netafrique.net/feed/
+max_articles_complets: 30
+
 # Requêtes de veille presse (Google News, gratuit, sans clé).
 requetes_actualites:
   - séminaire Ouagadougou hôtel
@@ -171,6 +184,7 @@ recherche_ia:
   active: true
   fournisseur: gemini
   modele_gemini: gemini-3.8-flash
+  recherche_web: true      # Gemini : mettre false si l'erreur 429 « quota » revient à chaque recherche
   modele: claude-opus-5-5   # utilisé si fournisseur: claude
   effort: medium            # Claude uniquement : low | medium | high
   max_recherches: 12        # Claude uniquement : requêtes web maximales par collecte

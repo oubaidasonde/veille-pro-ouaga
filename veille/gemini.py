@@ -51,14 +51,16 @@ def _modele_suggere(message: str) -> str | None:
     return m.group(1) if m else None
 
 
-def _appeler(client, **kwargs):
+def _appeler(client, essais: int = ESSAIS_SI_SATURE, **kwargs):
     """Appel avec reprise quand l'offre gratuite est saturée (429/503) ou quand le modèle a été retiré (404)."""
     global _modele_actif
     from google.genai import errors
 
     if _modele_actif:
         kwargs["model"] = _modele_actif
-    for essai in range(1, ESSAIS_SI_SATURE + 1):
+    essai = 0
+    while essai < essais:
+        essai += 1
         try:
             return client.models.generate_content(**kwargs)
         except errors.APIError as exc:
@@ -67,8 +69,9 @@ def _appeler(client, **kwargs):
                 log.warning("Modèle %s retiré par Google : passage à %s (mettez à jour modele_gemini).",
                             kwargs["model"], suggestion)
                 kwargs["model"] = _modele_actif = suggestion
+                essai -= 1  # changer de modèle ne compte pas comme un essai
                 continue
-            if exc.code in (429, 500, 503) and essai < ESSAIS_SI_SATURE:
+            if exc.code in (429, 500, 503) and essai < essais:
                 attente = 30 * essai
                 log.info("Gemini saturé (%s), nouvel essai dans %d s", exc.code, attente)
                 time.sleep(attente)
@@ -82,8 +85,10 @@ def rechercher(consigne: str, modele: str) -> tuple[str, list[str]]:
     """Recherche web via l'outil Google Search de Gemini. Renvoie (synthèse, URL sources)."""
     from google.genai import types
 
+    # Un seul essai : si l'outil de recherche n'a pas de quota dans l'offre gratuite, inutile d'attendre.
     reponse = _appeler(
         _client(),
+        essais=1,
         model=modele,
         contents=consigne,
         config=types.GenerateContentConfig(tools=[types.Tool(google_search=types.GoogleSearch())]),
