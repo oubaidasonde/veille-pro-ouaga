@@ -213,3 +213,17 @@ def test_repli_mots_cles_si_claude_indisponible(cfg, store, monkeypatch):
                         texte="Forum le 15 décembre 2026 au Bravia Hotel, Ouagadougou.")]
     bilan = pipeline.traiter_documents(docs, cfg, store, AUJ, verifier_les_liens=False)
     assert bilan.nouveaux == 1 and store.tous()[0].lieu_surveille == "Bravia Hotel Ouagadougou"
+
+
+def test_heuristique_ecarte_la_presse_non_datee_et_les_comptes_rendus(cfg):
+    pub = "Mon, 10 Aug 2026 08:00:00 GMT"
+    titres = [
+        "Forum de la jeunesse prévu du 28 au 30 août à Ouagadougou",   # août 2026, d'après la publication : passé
+        "Burkina : un colloque sur la souveraineté",                     # aucune date
+        "Formation : l'initiative X remet 1 119 équipements aux centres",  # compte rendu
+        "Atelier marchés publics prévu du 24 au 26 novembre à Ouagadougou",
+    ]
+    docs = [RawDocument(source="actualites", url=f"u{i}", titre=t, texte=t, publie_le=pub)
+            for i, t in enumerate(titres)]
+    evs = extraire_evenements_heuristique(docs, cfg, AUJ)
+    assert [e.date_debut for e in evs] == ["2026-11-24"]

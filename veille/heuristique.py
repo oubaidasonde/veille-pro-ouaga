@@ -7,7 +7,8 @@ produits ainsi sont toujours classés « à vérifier ».
 from __future__ import annotations
 
 import re
-from datetime import date
+from datetime import date, timedelta
+from email.utils import parsedate_to_datetime
 
 from .config import Config
 from .models import EvenementExtrait, RawDocument
@@ -36,8 +37,14 @@ TYPES = {
     "webinaire": "formation", "rencontre": "rencontre", "colloque": "conference",
     "symposium": "conference", "journées": "forum", "hackathon": "atelier",
 }
-PASSE = ("retour en images", "a organisé", "s'est tenu", "s’est tenu", "a pris fin", "ont pris fin",
-         "a clôturé", "ont clôturé", "clôture des travaux", "s'est achevé")
+PASSE = ("retour en images", "a organisé", "ont organisé", "s'est tenu", "s’est tenu", "se sont tenus",
+         "s'est déroulé", "s’est déroulé", "a eu lieu", "a pris fin", "ont pris fin", "a clôturé",
+         "ont clôturé", "clôture des travaux", "s'est achevé", "s’est achevé", "a réuni", "ont réuni",
+         "a abrité", "a accueilli", "a ouvert ses portes", "ouverture officielle", "a procédé", "remet ",
+         "a remis", "ont pris part", "a pris part", "bilan de", "recommandations issues")
+# Signes qu'il s'agit d'une annonce (et non d'un compte rendu)
+ANNONCE = ("prévu", "aura lieu", "se tiendra", "se déroulera", "inscription", "inscrivez", "appel à",
+           "candidature", "rendez-vous", "programme", "participer", "date limite", "à venir", "prochain")
 THEMES_MOTS = {
     "entrepreneuriat": ("entrepreneur", "startup", "start-up", "pme", "business", "incubat"),
     "finance": ("financ", "fiscal", "comptab", "banque", "investiss", "bourse", "brvm", "ohada"),
@@ -94,6 +101,18 @@ def detecter_themes(texte: str) -> list[str]:
     return themes or ["autre"]
 
 
+def _date_publication(doc: RawDocument) -> date | None:
+    if not doc.publie_le:
+        return None
+    try:
+        return parsedate_to_datetime(doc.publie_le).date()
+    except (TypeError, ValueError):
+        try:
+            return date.fromisoformat(doc.publie_le[:10])
+        except ValueError:
+            return None
+
+
 def extraire_evenements_heuristique(docs: list[RawDocument], cfg: Config,
                                     aujourdhui: date) -> list[EvenementExtrait]:
     evenements = []
@@ -105,8 +124,14 @@ def extraire_evenements_heuristique(docs: list[RawDocument], cfg: Config,
             continue
         if "burkina" not in bas and "ouaga" not in bas and not cfg.lieu_connu(texte):
             continue
-        debut, fin = trouver_dates(texte, aujourdhui)
-        if debut and (fin or debut) < aujourdhui:
+        # Une date sans année se rapporte à la date de publication de l'article, pas à aujourd'hui.
+        publie = _date_publication(doc)
+        reference = (publie - timedelta(days=7)) if publie else aujourdhui
+        debut, fin = trouver_dates(texte, reference)
+        # Sans IA, on n'accepte que des annonces datées et à venir : le reste est surtout de la presse.
+        if not debut or (fin or debut) < aujourdhui:
+            continue
+        if doc.source != "page" and not any(a in bas for a in ANNONCE) and publie and publie > debut:
             continue
         lieu = cfg.lieu_connu(texte)
         prix = RE_PRIX.search(texte)
