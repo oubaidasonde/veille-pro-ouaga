@@ -51,6 +51,7 @@ frequence: hebdo_et_mensuel
 canaux:
   - email
   - telegram
+  - whatsapp
 # whatsapp_fournisseur : twilio (officiel, payant) ou callmebot (gratuit, usage perso)
 whatsapp_fournisseur: callmebot
 
@@ -59,7 +60,8 @@ whatsapp_fournisseur: callmebot
 #    ouagadougou   → Ouagadougou uniquement
 #    burkina       → tout le Burkina Faso, priorité Ouagadougou
 # -----------------------------------------------------------------------------
-zone: burkina
+zone: ouagadougou
+# Extension prévue : tout le Burkina, puis l'Afrique de l'Ouest et le reste du continent.
 
 # Horizon de recherche : événements des N prochains jours
 horizon_jours: 120
