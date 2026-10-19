@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import time
 from datetime import date
 
@@ -41,14 +42,32 @@ def _client():
     return genai.Client(api_key=cle)
 
 
+_modele_actif: str | None = None  # modèle de remplacement retenu pendant l'exécution
+
+
+def _modele_suggere(message: str) -> str | None:
+    """Google indique parfois le modèle qui remplace un modèle retiré (« use models/xxx »)."""
+    m = re.search(r"use (?:models/)?(gemini-[\w.\-]+)", message or "")
+    return m.group(1) if m else None
+
+
 def _appeler(client, **kwargs):
-    """Appel avec reprise quand l'offre gratuite est momentanément saturée (HTTP 429 / 503)."""
+    """Appel avec reprise quand l'offre gratuite est saturée (429/503) ou quand le modèle a été retiré (404)."""
+    global _modele_actif
     from google.genai import errors
 
+    if _modele_actif:
+        kwargs["model"] = _modele_actif
     for essai in range(1, ESSAIS_SI_SATURE + 1):
         try:
             return client.models.generate_content(**kwargs)
         except errors.APIError as exc:
+            suggestion = _modele_suggere(exc.message) if exc.code == 404 else None
+            if suggestion and suggestion != kwargs["model"]:
+                log.warning("Modèle %s retiré par Google : passage à %s (mettez à jour modele_gemini).",
+                            kwargs["model"], suggestion)
+                kwargs["model"] = _modele_actif = suggestion
+                continue
             if exc.code in (429, 500, 503) and essai < ESSAIS_SI_SATURE:
                 attente = 30 * essai
                 log.info("Gemini saturé (%s), nouvel essai dans %d s", exc.code, attente)

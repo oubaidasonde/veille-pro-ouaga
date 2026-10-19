@@ -293,3 +293,19 @@ def test_gemini_cle_invalide_bascule_sur_mots_cles(cfg, store, monkeypatch):
                         texte="Atelier le 3 décembre 2026 au Laïco Ouaga 2000, Ouagadougou.")]
     bilan = traiter_documents(docs, cfg, store, AUJ, verifier_les_liens=False)
     assert bilan.nouveaux == 1 and store.tous()[0].lieu_surveille == "Hôtel Laïco Ouaga 2000"
+
+
+def test_gemini_modele_retire_bascule_sur_le_modele_suggere(monkeypatch):
+    from google.genai import errors
+
+    from veille import gemini
+
+    monkeypatch.setattr(gemini, "_modele_actif", None)
+    retire = errors.ClientError(404, {"error": {"code": 404, "status": "NOT_FOUND", "message":
+        "This model models/gemini-2.5-flash is no longer available to new users. Please update your code "
+        "to use models/gemini-3.8-flash for the latest features and improvements."}})
+    faux = _FauxGemini([retire, _reponse("ok")])
+    monkeypatch.setattr(gemini, "_client", lambda: faux)
+    texte, _ = gemini.rechercher("consigne", "gemini-2.5-flash")
+    assert texte == "ok"
+    assert [a["model"] for a in faux.appels] == ["gemini-2.5-flash", "gemini-3.8-flash"]

@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     _charger_env()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s %(levelname)-7s %(name)s — %(message)s")
-    for bruyant in ("httpx", "httpcore", "anthropic"):
+    for bruyant in ("httpx", "httpx2", "httpcore", "anthropic", "google_genai"):
         logging.getLogger(bruyant).setLevel(logging.WARNING)
 
     cfg = load_config(args.config)

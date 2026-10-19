@@ -170,7 +170,7 @@ requetes_actualites:
 recherche_ia:
   active: true
   fournisseur: gemini
-  modele_gemini: gemini-2.5-flash
+  modele_gemini: gemini-3.8-flash
   modele: claude-opus-5-5   # utilisé si fournisseur: claude
   effort: medium            # Claude uniquement : low | medium | high
   max_recherches: 12        # Claude uniquement : requêtes web maximales par collecte

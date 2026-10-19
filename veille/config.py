@@ -54,7 +54,7 @@ class Lieu(BaseModel):
 class RechercheIA(BaseModel):
     active: bool = True
     fournisseur: Literal["gemini", "claude"] = "gemini"
-    modele_gemini: str = "gemini-2.5-flash"
+    modele_gemini: str = "gemini-3.8-flash"
     modele: str = "claude-opus-5-5"
     effort: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
     max_recherches: int = 12
