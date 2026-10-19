@@ -53,6 +53,8 @@ class Lieu(BaseModel):
 
 class RechercheIA(BaseModel):
     active: bool = True
+    fournisseur: Literal["gemini", "claude"] = "gemini"
+    modele_gemini: str = "gemini-2.5-flash"
     modele: str = "claude-opus-5-5"
     effort: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
     max_recherches: int = 12
@@ -76,6 +78,8 @@ class Config(BaseModel):
 
     @property
     def ia_disponible(self) -> bool:
+        if self.recherche_ia.fournisseur == "gemini":
+            return bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
         return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
 
     def lieu_connu(self, texte: str | None) -> Lieu | None:

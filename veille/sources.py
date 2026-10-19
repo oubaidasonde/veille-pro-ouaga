@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import date, timedelta
 from urllib.parse import quote_plus
 
@@ -108,12 +109,7 @@ Règles :
 Réponds en français, un bloc par événement."""
 
 
-def collecter_recherche_ia(cfg: Config, aujourdhui: date) -> list[RawDocument]:
-    if not (cfg.recherche_ia.active and cfg.ia_disponible):
-        log.info("Recherche IA désactivée (pas de clé ANTHROPIC_API_KEY ou option inactive).")
-        return []
-
-    client = client_ia()
+def _consigne(cfg: Config, aujourdhui: date, focus: str = "") -> str:
     consigne = CONSIGNE_RECHERCHE.format(
         debut=aujourdhui.isoformat(),
         fin=(aujourdhui + timedelta(days=cfg.horizon_jours)).isoformat(),
@@ -124,6 +120,21 @@ def collecter_recherche_ia(cfg: Config, aujourdhui: date) -> list[RawDocument]:
         organismes=", ".join(cfg.organismes),
         themes=", ".join(sorted(cfg.thematiques.actives())),
     )
+    return consigne + (f"\n\nPour cette recherche, concentre-toi sur : {focus}" if focus else "")
+
+
+# Gemini fait une recherche Google par appel : on découpe la veille en angles complémentaires.
+ANGLES_GEMINI = [
+    "les événements annoncés dans les grands hôtels et centres de conférence de Ouagadougou",
+    "les formations, séminaires et ateliers proposés par les cabinets, organismes de formation, "
+    "chambres consulaires et institutions (inscriptions ouvertes)",
+    "les conférences, forums et rencontres annoncés sur LinkedIn, Facebook et la presse burkinabè "
+    "(Lefaso.net, Burkina24, Sidwaya, AIB)",
+]
+
+
+def _recherche_claude(cfg: Config, consigne: str) -> tuple[str, list[str]]:
+    client = client_ia()
     tools = [{
         "type": "web_search_20260209",
         "name": "web_search",
@@ -149,25 +160,43 @@ def collecter_recherche_ia(cfg: Config, aujourdhui: date) -> list[RawDocument]:
         messages = [messages[0], {"role": "assistant", "content": reponse.content}]
 
     if reponse is None or reponse.stop_reason == "refusal":
-        log.warning("Recherche IA : aucune réponse exploitable.")
-        return []
-
-    texte = texte_reponse(reponse)
+        return "", []
     sources = sorted({
         r.url
         for bloc in reponse.content if bloc.type == "web_search_tool_result"
         and isinstance(bloc.content, list)
         for r in bloc.content if getattr(r, "url", None)
     })
-    log.info("Recherche IA : %d caractères, %d sources consultées", len(texte), len(sources))
-    if not texte:
+    return texte_reponse(reponse), sources
+
+
+def collecter_recherche_ia(cfg: Config, aujourdhui: date) -> list[RawDocument]:
+    if not (cfg.recherche_ia.active and cfg.ia_disponible):
+        log.info("Recherche IA désactivée (pas de clé pour %s ou option inactive).", cfg.recherche_ia.fournisseur)
         return []
-    return [RawDocument(
-        source="recherche_ia",
-        url="recherche-ia://" + aujourdhui.isoformat(),
-        titre="Synthèse de recherche web",
-        texte=texte + "\n\nSources consultées :\n" + "\n".join(sources),
-    )]
+
+    if cfg.recherche_ia.fournisseur == "gemini":
+        from . import gemini
+
+        resultats = []
+        for i, angle in enumerate(ANGLES_GEMINI):
+            if i:
+                time.sleep(gemini.PAUSE_ENTRE_APPELS)
+            resultats.append(gemini.rechercher(_consigne(cfg, aujourdhui, angle), cfg.recherche_ia.modele_gemini))
+    else:
+        resultats = [_recherche_claude(cfg, _consigne(cfg, aujourdhui))]
+
+    docs = []
+    for i, (texte, sources) in enumerate(resultats, 1):
+        log.info("Recherche IA %d : %d caractères, %d sources", i, len(texte), len(sources))
+        if texte:
+            docs.append(RawDocument(
+                source="recherche_ia",
+                url=f"recherche-ia://{aujourdhui.isoformat()}/{i}",
+                titre="Synthèse de recherche web",
+                texte=texte + "\n\nSources consultées :\n" + "\n".join(sources),
+            ))
+    return docs
 
 
 def nouveau_client_http() -> httpx.Client:

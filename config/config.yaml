@@ -163,9 +163,14 @@ requetes_actualites:
   - passation des marchés formation Burkina
   - appel à participation séminaire Burkina Faso
 
-# Recherche web approfondie par Claude (nécessite ANTHROPIC_API_KEY).
+# Intelligence artificielle : recherche web + extraction fiable des annonces.
+#   fournisseur: gemini → Google Gemini (offre gratuite, clé GEMINI_API_KEY sur aistudio.google.com)
+#   fournisseur: claude → Claude d'Anthropic (payant, clé ANTHROPIC_API_KEY)
+# Sans clé valide, l'agent bascule automatiquement sur l'extraction par mots-clés.
 recherche_ia:
   active: true
-  modele: claude-opus-5-5
-  effort: medium            # low | medium | high
-  max_recherches: 12        # nombre maximal de requêtes web par collecte
+  fournisseur: gemini
+  modele_gemini: gemini-2.5-flash
+  modele: claude-opus-5-5   # utilisé si fournisseur: claude
+  effort: medium            # Claude uniquement : low | medium | high
+  max_recherches: 12        # Claude uniquement : requêtes web maximales par collecte

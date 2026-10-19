@@ -172,6 +172,8 @@ def test_calendrier(cfg):
 def test_chaine_complete_sans_ia(cfg, store, monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     docs = [RawDocument(source="page", url="https://lancaster.example/agenda", titre="Conférence leadership",
                         texte="Conférence sur le leadership au Lancaster Ouaga 2000 le 4 décembre 2026, "
                               "entrée libre. Contact : 70 11 22 33")]
@@ -204,6 +206,7 @@ def test_repli_mots_cles_si_claude_indisponible(cfg, store, monkeypatch):
     from veille.llm import IAIndisponible
 
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    cfg.recherche_ia.fournisseur = "claude"
 
     def echec(*a, **k):
         raise IAIndisponible("Your credit balance is too low")
@@ -227,3 +230,66 @@ def test_heuristique_ecarte_la_presse_non_datee_et_les_comptes_rendus(cfg):
             for i, t in enumerate(titres)]
     evs = extraire_evenements_heuristique(docs, cfg, AUJ)
     assert [e.date_debut for e in evs] == ["2026-11-24"]
+
+
+class _FauxGemini:
+    """Remplace le client Gemini : renvoie des réponses préparées, sans réseau."""
+
+    def __init__(self, reponses):
+        self.reponses = list(reponses)
+        self.appels = []
+        self.models = self
+
+    def generate_content(self, **kwargs):
+        self.appels.append(kwargs)
+        rep = self.reponses.pop(0)
+        if isinstance(rep, Exception):
+            raise rep
+        return rep
+
+
+def _reponse(texte, uris=()):
+    from types import SimpleNamespace as N
+
+    chunks = [N(web=N(uri=u)) for u in uris]
+    return N(text=texte, candidates=[N(grounding_metadata=N(grounding_chunks=chunks))])
+
+
+def test_gemini_extraction_et_recherche(monkeypatch):
+    import json
+
+    from veille import gemini
+
+    ev = dict(titre="Séminaire fiscalité", type="seminaire", themes=["finance"], resume="r",
+              date_debut="2026-11-12", lieu="Azalaï Hôtel", ville="Ouagadougou",
+              source_officielle=True, source_urls=["https://a.bf"])
+    mauvais = {"titre": "incomplet"}  # ignoré sans faire échouer le lot
+    faux = _FauxGemini([
+        _reponse("```json\n" + json.dumps({"evenements": [ev, mauvais]}) + "\n```"),
+        _reponse("Synthèse : séminaire le 12 novembre.", ["https://source.bf/1", "https://source.bf/1"]),
+    ])
+    monkeypatch.setattr(gemini, "_client", lambda: faux)
+
+    docs = [RawDocument(source="actualites", url="https://a.bf", titre="t", texte="x")]
+    evs = gemini.extraire_evenements(docs, AUJ, "gemini-2.5-flash")
+    assert [e.titre for e in evs] == ["Séminaire fiscalité"]
+    assert faux.appels[0]["config"].response_mime_type == "application/json"
+
+    texte, sources = gemini.rechercher("consigne", "gemini-2.5-flash")
+    assert texte.startswith("Synthèse") and sources == ["https://source.bf/1"]
+    assert faux.appels[1]["config"].tools[0].google_search is not None
+
+
+def test_gemini_cle_invalide_bascule_sur_mots_cles(cfg, store, monkeypatch):
+    from google.genai import errors
+
+    from veille import gemini
+
+    monkeypatch.setenv("GEMINI_API_KEY", "cle-test")
+    cfg.recherche_ia.fournisseur = "gemini"
+    erreur = errors.ClientError(400, {"error": {"code": 400, "message": "API key not valid", "status": "INVALID_ARGUMENT"}})
+    monkeypatch.setattr(gemini, "_client", lambda: _FauxGemini([erreur]))
+    docs = [RawDocument(source="page", url="https://x", titre="Atelier marketing digital",
+                        texte="Atelier le 3 décembre 2026 au Laïco Ouaga 2000, Ouagadougou.")]
+    bilan = traiter_documents(docs, cfg, store, AUJ, verifier_les_liens=False)
+    assert bilan.nouveaux == 1 and store.tous()[0].lieu_surveille == "Hôtel Laïco Ouaga 2000"

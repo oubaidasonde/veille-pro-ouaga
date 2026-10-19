@@ -16,11 +16,11 @@ Chaque jour, il cherche les annonces, en extrait les informations utiles, les **
  ┌──────────── COLLECTE (chaque jour, 06:15) ────────────┐
  │ 1. Presse / actualités  (Google News, gratuit)        │
  │ 2. Pages suivies        (sites d'hôtels, agendas)     │
- │ 3. Recherche web IA     (Claude + web_search :        │
- │    LinkedIn, Facebook, organismes, presse BF…)        │
+ │ 3. Recherche web IA     (Gemini + Google Search,      │
+ │    ou Claude : LinkedIn, Facebook, presse BF…)        │
  └───────────────────────────┬───────────────────────────┘
                              ▼
-   EXTRACTION   Claude → fiche structurée par événement
+   EXTRACTION   Gemini / Claude → fiche structurée par événement
                 (sans clé : extraction par mots-clés et dates en français)
                              ▼
    VÉRIFICATION score 0–100 : date, lieu surveillé, organisateur, tarif,
@@ -73,12 +73,13 @@ Dans GitHub : **Settings → Secrets and variables → Actions → New repositor
 
 | Secret | Rôle | Obligatoire |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Recherche web approfondie + extraction fiable ([console.anthropic.com](https://console.anthropic.com)) | Fortement recommandé |
+| `GEMINI_API_KEY` | IA **gratuite** de Google : recherche web + extraction fiable ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)) | Fortement recommandé |
+| `ANTHROPIC_API_KEY` | Alternative payante (Claude), avec `recherche_ia.fournisseur: claude` | Facultatif |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_TO` (+ `EMAIL_FROM`) | E-mail | Si canal `email` |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Telegram | Si canal `telegram` |
 | `WHATSAPP_TO` + `CALLMEBOT_APIKEY` *ou* `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` | WhatsApp | Si canal `whatsapp` |
 
-Sans `ANTHROPIC_API_KEY`, l'agent fonctionne quand même (presse + pages suivies, extraction par mots-clés), mais la couverture est plus faible et tout est classé « à vérifier ».
+Sans clé d'IA valide, l'agent fonctionne quand même (presse + pages suivies, extraction par mots-clés), mais la couverture est plus faible et tout est classé « à vérifier ».
 
 <details>
 <summary><b>Gmail</b> : obtenir un mot de passe SMTP</summary>
@@ -135,7 +136,8 @@ Tests : `pip install pytest && python -m pytest`
 ```
 config/config.yaml        Préférences, lieux, organismes, requêtes
 veille/sources.py         Collecteurs : actualités RSS, pages suivies, recherche web Claude
-veille/llm.py             Extraction structurée (Claude, sorties JSON validées)
+veille/gemini.py          Recherche Google + extraction avec Gemini (gratuit)
+veille/llm.py             Extraction structurée avec Claude (sorties JSON validées)
 veille/heuristique.py     Extraction de secours sans IA (dates en français, tarifs FCFA…)
 veille/verification.py    Score de confiance et statut confirmé / à vérifier
 veille/store.py           Base JSON, dédoublonnage et fusion des sources
@@ -149,6 +151,7 @@ veille/pipeline.py        Enchaînement des étapes et calendrier d'envoi
 ## Coût et limites
 
 - **GitHub Actions** : gratuit pour cet usage (quelques minutes par jour).
-- **Claude** : une recherche web + une ou deux extractions par jour, soit généralement quelques centimes à quelques dizaines de centimes de dollar par jour selon le volume trouvé. Réglez `recherche_ia.max_recherches` et `recherche_ia.effort` pour ajuster.
+- **Gemini** : l'offre gratuite couvre la collecte quotidienne (3 recherches + 2 à 3 extractions par jour).
+- **Claude** (optionnel) : généralement quelques centimes de dollar par jour ; réglez `recherche_ia.max_recherches` et `recherche_ia.effort`.
 - LinkedIn et Facebook ne permettent pas d'être lus directement par un robot : l'agent n'y accède qu'à travers leurs **publications publiques indexées** par les moteurs de recherche. Pour une page précise (hôtel, cabinet), ajoutez son site à `pages_suivies`.
 - Les informations viennent de sources publiques : **vérifiez toujours auprès de l'organisateur avant de payer**.

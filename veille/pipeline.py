@@ -35,11 +35,16 @@ def traiter_documents(docs: list[RawDocument], cfg: Config, store: Store, aujour
     extraits = None
     if cfg.ia_disponible and docs:
         try:
-            extraits = extraire_evenements_ia(docs, aujourdhui, cfg.recherche_ia.modele, cfg.recherche_ia.effort)
+            if cfg.recherche_ia.fournisseur == "gemini":
+                from .gemini import extraire_evenements as extraire_gemini
+                extraits = extraire_gemini(docs, aujourdhui, cfg.recherche_ia.modele_gemini)
+            else:
+                extraits = extraire_evenements_ia(docs, aujourdhui, cfg.recherche_ia.modele,
+                                                  cfg.recherche_ia.effort)
         except IAIndisponible as exc:
-            log.warning("Claude indisponible (%s) : extraction par mots-clés à la place.", exc)
+            log.warning("IA indisponible (%s) : extraction par mots-clés à la place.", exc)
     elif not cfg.ia_disponible:
-        log.warning("Pas de clé ANTHROPIC_API_KEY : extraction par mots-clés (résultats « à vérifier »).")
+        log.warning("Pas de clé d'IA (GEMINI_API_KEY ou ANTHROPIC_API_KEY) : extraction par mots-clés (résultats « à vérifier »).")
     if extraits is None:
         extraits = extraire_evenements_heuristique(docs, cfg, aujourdhui)
 
