@@ -334,3 +334,11 @@ def test_flux_rss_lit_les_annonces_en_entier(cfg):
     docs = collecter_flux(cfg, httpx.Client(transport=httpx.MockTransport(repondre)))
     assert [d.url for d in docs] == ["https://media.bf/seminaire"]  # le football est écarté
     assert "100 000 FCFA" in docs[0].texte                            # texte complet de l'article
+
+
+def test_doublon_titre_court_contenu_dans_titre_long(store):
+    a, _ = store.integrer(extrait(titre="Les REMA 2026 (Rencontres Musicales Africaines)", date_debut="2026-10-22"))
+    b, nouveau = store.integrer(extrait(titre="REMA 2026", date_debut="2026-10-22"))
+    assert not nouveau and a is b and len(store.evenements) == 1
+    _, autre_date = store.integrer(extrait(titre="REMA 2026", date_debut="2027-10-22"))
+    assert autre_date  # même titre, autre édition : événement distinct

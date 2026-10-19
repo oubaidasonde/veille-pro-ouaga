@@ -39,7 +39,12 @@ class Store:
         for autre in self.evenements.values():
             if ev.date_debut and autre.date_debut and ev.date_debut != autre.date_debut:
                 continue
-            if SequenceMatcher(None, titre, normaliser(autre.titre)).ratio() >= SIMILARITE_TITRE:
+            titre_autre = normaliser(autre.titre)
+            if SequenceMatcher(None, titre, titre_autre).ratio() >= SIMILARITE_TITRE:
+                return autre
+            # Même date et un titre contenu dans l'autre : « REMA 2026 » / « Les REMA 2026 (…) »
+            if (ev.date_debut and ev.date_debut == autre.date_debut and min(len(titre), len(titre_autre)) >= 6
+                    and (titre in titre_autre or titre_autre in titre)):
                 return autre
         return None
 

@@ -62,8 +62,14 @@ MOTS_EVENEMENT = ("formation", "séminaire", "seminaire", "atelier", "conférenc
                   "journées", "hackathon", "certifiant", "inscription", "appel à candidatures")
 
 
+HORS_SUJET = ("festival", "concert", "musical", "musique", "football", "match ", "championnat", "sculpture",
+              "carnaval", "miss ", "fesp", "fespaco", "cinéma", "théâtre", "funérailles", "religieu")
+
+
 def annonce_probable(texte: str, cfg: Config) -> bool:
     t = texte.lower()
+    if any(h in t for h in HORS_SUJET):
+        return False
     return any(m in t for m in MOTS_EVENEMENT) and (
         "ouaga" in t or "burkina" in t or cfg.lieu_connu(texte) is not None)
 

@@ -22,6 +22,12 @@ au Burkina Faso et dont la date est postérieure ou égale à la date du jour, o
 mais manifestement à venir.
 
 Règles strictes :
+- Uniquement des événements PROFESSIONNELS : formations, renforcement de capacités, séminaires
+  et ateliers techniques, conférences économiques, financières, numériques, institutionnelles
+  ou diplomatiques, forums d'affaires, salons professionnels, rencontres B2B.
+- Exclure les événements culturels, artistiques, musicaux, sportifs, religieux, festifs ou
+  politiques (festivals, concerts, rencontres musicales, expositions d'art, symposiums de
+  sculpture, compétitions, cérémonies, meetings), ainsi que les remises de dons ou de diplômes.
 - Exclure les comptes rendus d'événements passés (« retour en images », « a organisé »,
   « s'est tenu »), les offres d'emploi, les appels d'offres sans événement, la publicité hôtelière.
 - Ne rien inventer : un champ absent du document vaut null. Pas de date déduite au hasard.
