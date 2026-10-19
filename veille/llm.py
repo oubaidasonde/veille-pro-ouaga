@@ -16,20 +16,27 @@ TAILLE_LOT = 40_000  # caractères de documents par appel d'extraction
 CONSIGNE_EXTRACTION = """Tu es analyste de veille événementielle pour un professionnel basé à Ouagadougou.
 Date du jour : {aujourdhui}.
 
-À partir des documents fournis, extrais UNIQUEMENT les événements professionnels
-(formation, conférence, séminaire, atelier, forum, salon, rencontre) qui se tiennent
-au Burkina Faso et dont la date est postérieure ou égale à la date du jour, ou inconnue
-mais manifestement à venir.
+À partir des documents fournis, extrais les OPPORTUNITÉS PROFESSIONNELLES à venir qui
+concernent un professionnel basé au Burkina Faso :
+1. les événements (formation, conférence, séminaire, atelier, forum, salon, rencontre
+   professionnelle) qui se tiennent au Burkina Faso ;
+2. les appels à candidatures, manifestations d'intérêt ou inscriptions ouvertes pour une
+   FORMATION professionnelle (y compris gratuite ou en ligne) accessible depuis le Burkina Faso.
+Conserve-les si leur date (ou leur date limite d'inscription) est postérieure ou égale à la
+date du jour, ou si elle est inconnue mais que l'annonce est manifestement récente et ouverte.
 
-Règles strictes :
-- Uniquement des événements PROFESSIONNELS : formations, renforcement de capacités, séminaires
-  et ateliers techniques, conférences économiques, financières, numériques, institutionnelles
-  ou diplomatiques, forums d'affaires, salons professionnels, rencontres B2B.
-- Exclure les événements culturels, artistiques, musicaux, sportifs, religieux, festifs ou
-  politiques (festivals, concerts, rencontres musicales, expositions d'art, symposiums de
-  sculpture, compétitions, cérémonies, meetings), ainsi que les remises de dons ou de diplômes.
-- Exclure les comptes rendus d'événements passés (« retour en images », « a organisé »,
-  « s'est tenu »), les offres d'emploi, les appels d'offres sans événement, la publicité hôtelière.
+Règles :
+- Thèmes professionnels : entrepreneuriat, finance, numérique, marketing, management,
+  marchés publics, développement personnel, diplomatie, hôtellerie, agriculture, etc.
+- Exclure : événements culturels, artistiques, musicaux, sportifs, religieux, festifs ou
+  politiques ; concours de la fonction publique, recrutements d'emploi, bourses d'études,
+  admissions universitaires (licence, master, écoles), résultats d'examens, remises de dons
+  ou de diplômes ; comptes rendus d'événements passés (« a organisé », « s'est tenu »,
+  « clôture ») ; appels d'offres sans événement ; publicité hôtelière.
+- Beaucoup de documents ne contiennent qu'un TITRE : si le titre suffit à identifier une
+  opportunité à venir, extrais-la quand même avec les champs inconnus à null.
+- Formation en ligne : ville = "En ligne". À l'étranger mais ouverte aux Burkinabè : ville = la
+  ville étrangère.
 - Ne rien inventer : un champ absent du document vaut null. Pas de date déduite au hasard.
 - Dates au format AAAA-MM-JJ. Si seule l'année manque, prends la prochaine occurrence.
 - tarif_fcfa : montant principal en FCFA (0 si gratuit), null si non publié.
@@ -44,7 +51,7 @@ S'il n'y a aucun événement, renvoie une liste vide."""
 
 
 class IAIndisponible(RuntimeError):
-    """Claude ne répond pas (crédit épuisé, clé invalide, service inaccessible)."""
+    """L'IA ne répond pas (crédit épuisé, clé invalide, service inaccessible)."""
 
 
 def client_ia() -> anthropic.Anthropic:

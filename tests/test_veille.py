@@ -342,3 +342,20 @@ def test_doublon_titre_court_contenu_dans_titre_long(store):
     assert not nouveau and a is b and len(store.evenements) == 1
     _, autre_date = store.integrer(extrait(titre="REMA 2026", date_debut="2027-10-22"))
     assert autre_date  # même titre, autre édition : événement distinct
+
+
+def test_zone_ouagadougou_garde_les_formations_en_ligne(cfg, store):
+    ev, _ = store.integrer(extrait(titre="Formation Excel avancé", ville="En ligne", lieu=None))
+    evaluer(ev, cfg, AUJ)
+    cfg.zone = "ouagadougou"
+    assert [e.titre for e in selectionner(store.tous(), cfg, AUJ)] == ["Formation Excel avancé"]
+
+
+def test_annonces_non_datees_et_inscriptions_closes(cfg, store):
+    ev, _ = store.integrer(extrait(titre="Appel à candidatures formation TIC", date_debut=None, date_fin=None))
+    evaluer(ev, cfg, AUJ)
+    ev.premiere_detection = "2026-10-01T00:00:00+00:00"
+    assert selectionner(store.tous(), cfg, AUJ)                       # détectée il y a 18 jours
+    assert not selectionner(store.tous(), cfg, date(2026, 12, 1))     # plus de 45 jours après
+    ev.date_limite_inscription = "2026-10-10"
+    assert not selectionner(store.tous(), cfg, AUJ)                   # inscriptions closes

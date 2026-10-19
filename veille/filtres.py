@@ -12,7 +12,7 @@ def dans_la_zone(ev: Evenement, cfg: Config) -> bool:
     if cfg.zone == "burkina":
         return True
     ville = (ev.ville or "").lower()
-    return "ouaga" in ville or ev.lieu_surveille is not None or not ville
+    return "ouaga" in ville or "en ligne" in ville or ev.lieu_surveille is not None or not ville
 
 
 def dans_le_budget(ev: Evenement, cfg: Config) -> bool:
@@ -31,8 +31,12 @@ def dans_les_themes(ev: Evenement, cfg: Config) -> bool:
 def dans_l_horizon(ev: Evenement, cfg: Config, aujourdhui: date) -> bool:
     if ev.statut in ("passe", "annule"):
         return False
+    if ev.cloture and ev.cloture < aujourdhui and (ev.debut is None or ev.debut < aujourdhui):
+        return False  # inscriptions closes
     if ev.debut is None:
-        return True
+        # Annonce non datée : on la présente pendant 45 jours après sa détection, pas indéfiniment.
+        detecte = date.fromisoformat(ev.premiere_detection[:10])
+        return (aujourdhui - detecte).days <= 45
     return ev.debut <= aujourdhui + timedelta(days=cfg.horizon_jours)
 
 
